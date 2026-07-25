@@ -12,7 +12,7 @@ function Assert-Output {
   Write-Host "PASS $Desc" -ForegroundColor Green; $script:passed++
 }
 
-$script = Join-Path $PSScriptRoot pscli.ps1
+$script = Join-Path $PSScriptRoot cli.ps1
 
 # Non-interactive tests
 Assert-Output "all args" { pwsh -NoProfile -File $script -Name alice -Role admin -Email a@b.com -Notify } `
@@ -25,10 +25,13 @@ Assert-Output "switch only" { pwsh -NoProfile -File $script -Name test -Notify }
   @("Created user 'test'", 'Notification sent') @('Interactive mode')
 
 Assert-Output "--help" { pwsh -NoProfile -File $script --help } `
-  @('Name', 'Role', 'Email', 'Notify', 'admin/user/viewer') @()
+  @('Name', 'Role', 'Email', 'Password', 'Notify', 'admin/user/viewer') @()
 
 Assert-Output "partial args" { pwsh -NoProfile -File $script -Name bob -Role admin } `
   @("Created user 'bob'", 'Role: admin') @('Interactive mode')
+
+Assert-Output "securestring flag" { pwsh -NoProfile -File $script -Name alice -Password mysecret123 } `
+  @("Created user 'alice'", 'Password set (length: 11)') @('Interactive mode')
 
 # Interactive tests need separate PowerShell processes with piped stdin
 function Assert-Interactive {
@@ -43,16 +46,16 @@ function Assert-Interactive {
 # Build input with actual newlines
 $nl = "`n"
 
-Assert-Interactive "full walkthrough" "alice${nl}2${nl}alice@x.com${nl}y${nl}" `
-  @("Created user 'alice'", 'Role: user', 'Email: alice@x.com', 'Notification sent') @()
+Assert-Interactive "full walkthrough" "alice${nl}2${nl}alice@x.com${nl}mysecret${nl}y${nl}" `
+  @("Created user 'alice'", 'Role: user', 'Email: alice@x.com', 'Password set (length: 8)', 'Notification sent') @()
 
-Assert-Interactive "skip optional param" "bob${nl}1${nl}${nl}${nl}" `
+Assert-Interactive "skip optional param" "bob${nl}1${nl}${nl}${nl}${nl}" `
   @("Created user 'bob'", 'Role: admin') @('Email: alice@x.com')
 
-Assert-Interactive "re-prompt on invalid" "charlie${nl}3${nl}bad${nl}charlie@x.com${nl}y${nl}" `
+Assert-Interactive "re-prompt on invalid" "charlie${nl}3${nl}bad${nl}charlie@x.com${nl}${nl}y${nl}" `
   @("Created user 'charlie'", 'Role: viewer', 'Email: charlie@x.com', 'Notification sent') @()
 
-Assert-Interactive "default used on empty input" "dave${nl}${nl}${nl}${nl}" `
+Assert-Interactive "default used on empty input" "dave${nl}${nl}${nl}${nl}${nl}" `
   @("Created user 'dave'", 'Role: user') @()
 
 Write-Host "`n=== $passed passed, $failed failed ===" -ForegroundColor $(if ($failed) { 'Red' } else { 'Green' })

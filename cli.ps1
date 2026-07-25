@@ -328,16 +328,26 @@ function Invoke-Cli {
         # 3. SecureString Parameters
         elseif ($p.ParameterType -eq [securestring]) {
           $promptLabel = if ($d -ne $null) { "$n [$d]" } elseif (!$mandatory) { "$n (optional)" } else { $n }
-          $sec = Read-Host $promptLabel -AsSecureString
-          if ($sec.Length -eq 0) {
-            if ($d -ne $null) {
+          if ([Console]::IsInputRedirected) {
+            $rawInput = Read-Host $promptLabel
+            if (![string]::IsNullOrEmpty($rawInput)) {
+              $b[$n] = ConvertTo-SecureString $rawInput -AsPlainText -Force
+            } elseif ($d -ne $null) {
               $b[$n] = if ($d -is [securestring]) { $d } else { ConvertTo-SecureString "$d" -AsPlainText -Force }
             } elseif ($mandatory) {
-              $ok = $false
-              Write-Host "  Value is required." -ForegroundColor Red
+              $ok = $false; Write-Host "  Value is required." -ForegroundColor Red
             }
           } else {
-            $b[$n] = $sec
+            $sec = Read-Host $promptLabel -AsSecureString
+            if ($sec.Length -eq 0) {
+              if ($d -ne $null) {
+                $b[$n] = if ($d -is [securestring]) { $d } else { ConvertTo-SecureString "$d" -AsPlainText -Force }
+              } elseif ($mandatory) {
+                $ok = $false; Write-Host "  Value is required." -ForegroundColor Red
+              }
+            } else {
+              $b[$n] = $sec
+            }
           }
         }
         # 4. PSCredential Parameters

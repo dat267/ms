@@ -1,4 +1,4 @@
-# pscli — PowerShell CLI wrapper
+# cli.ps1 — PowerShell CLI wrapper
 
 One script block, one wrapper, zero boilerplate. Define your logic in `$MainPayload` with standard PowerShell attributes — the wrapper handles arg parsing, validation re-prompting, and interactive walkthroughs automatically.
 
@@ -13,6 +13,7 @@ $MainPayload = {
     [Parameter(Mandatory)][ValidateLength(3,20)][string]$Name,
     [ValidateSet('admin','user','viewer')][string]$Role = 'user',
     [ValidatePattern('^\S+@\S+$')][string]$Email,
+    [securestring]$Password,
     [switch]$Notify
   )
   Write-Host "✓ Created user '$Name'"
@@ -20,7 +21,7 @@ $MainPayload = {
 }
 
 # ── CLI machinery (paste at the bottom) ─────────────────────
-# ... ~100 lines, leave as-is ...
+# ... leave as-is ...
 Invoke-Cli @args
 ```
 
@@ -31,27 +32,31 @@ Three modes, automatically selected:
 | Mode | Trigger | Behaviour |
 |------|---------|-----------|
 | **Silent** | All args provided via flags | Runs immediately, no prompts |
-| **Partial** | Some mandatory args missing | Prompts only for missing ones |
-| **Full interactive** | No args at all | Walks through every parameter |
+| **Partial** | Some mandatory args missing | Fails with error listing missing parameters |
+| **Full interactive** | No args at all | Walks through parameters with validation |
 
 | Input type | Prompt style |
 |------------|-------------|
-| `[ValidateSet('a','b','c')]` | Numbered menu |
-| `[switch]` | `y/n` prompt (rejects anything else) |
-| Everything else | Text input with validation re-prompt |
+| `[ValidateSet('a','b','c')]` | Numbered menu (accepts number or choice name) |
+| `[switch]` | `y/n` prompt (respects default on empty input) |
+| `[securestring]` | Password masked entry (`Read-Host -AsSecureString`) |
+| Everything else | Text input with validation re-prompt and default/optional hints |
 
-## Supported attributes
+## Supported attributes & features
 
-| Attribute | Handled |
-|-----------|---------|
+| Attribute / Feature | Handled |
+|---------------------|---------|
 | `[Parameter(Mandatory)]` | ✓ |
 | `[Parameter(Position=N)]` | ✓ |
 | `[Parameter(ParameterSetName='X')]` | ✓ |
 | `[Alias('CN')]` | ✓ |
-| `[ValidateSet('a','b')]` | ✓ (numbered menu) |
+| Kebab-case Aliases (`--role-name` for `$RoleName`) | ✓ |
+| `[securestring]` | ✓ (masked interactive input & string conversion) |
+| `[PSCredential]` | ✓ |
+| `[ValidateSet('a','b')]` | ✓ (numbered menu or direct string match) |
 | `[ValidatePattern('regex')]` | ✓ |
 | `[ValidateLength(3,20)]` | ✓ |
-| `[ValidateRange(0,100)]` | ✓ |
+| `[ValidateRange(0,100)]` | ✓ (numeric validation) |
 | `[ValidateScript({...})]` | ✓ |
 | `[ValidateNotNull()]` | ✓ |
 | `[ValidateNotNullOrEmpty()]` | ✓ |
@@ -61,14 +66,15 @@ Three modes, automatically selected:
 | `[AllowEmptyCollection()]` | ✓ |
 | `[switch]` | ✓ |
 | `[CmdletBinding()]` | ✓ |
-| Default values (`$Role = 'user'`) | ✓ |
+| Default values (`$Role = 'user'`, `$Active = $true`) | ✓ |
+| Negative Numbers (`-Offset -10`) | ✓ |
 | `-Name=Value` / `-Name:Value` | ✓ |
 | `-Switch:$false` | ✓ |
 
 ## Example
 
 ```
-./pscli.ps1
+./cli.ps1
 ```
 
 ```
@@ -78,20 +84,22 @@ Role:
   1. admin
   2. user
   3. viewer
-Choose (1-3): 2
-Email: alice@example.com
+Choose (1-3) [user]: 1
+Email (optional): alice@example.com
+Password (optional): ********
 Notify (y/n): y
-✓ Created user 'alice'
-  Role: user
+  Created user 'alice'
+  Role: admin
   Email: alice@example.com
+  Password set (length: 8)
   Notification sent
 ```
 
 ```
-./pscli.ps1 -Name bob -Role admin -Notify
+./cli.ps1 -Name bob -Role admin -Notify
 ```
 ```
-✓ Created user 'bob'
+  Created user 'bob'
   Role: admin
   Notification sent
 ```
@@ -100,5 +108,5 @@ Notify (y/n): y
 
 | File | Purpose |
 |------|---------|
-| `pscli.ps1` | Template script — replace `$MainPayload` with your logic |
-| `tests.ps1` | 9 regression tests — run with `pwsh -File tests.ps1` |
+| `cli.ps1` | Template script — replace `$MainPayload` with your logic |
+| `tests.ps1` | Regression test suite — run with `pwsh -File tests.ps1` |
