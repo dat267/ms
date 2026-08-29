@@ -70,6 +70,7 @@ Three modes, automatically selected:
 | Negative Numbers (`-Offset -10`) | ✓ |
 | `-Name=Value` / `-Name:Value` | ✓ |
 | `-Switch:$false` | ✓ |
+| Array params: `-Names a,b` and repeated `-Names a -Names b` | ✓ |
 
 ## Example
 
@@ -109,4 +110,5 @@ Notify (y/n): y
 | File | Purpose |
 |------|---------|
 | `cli.ps1` | Template script — replace `$MainPayload` with your logic |
+| `examples/user-manager.ps1` | Full worked example exercising every supported attribute type |
 | `tests.ps1` | Regression test suite — run with `pwsh -File tests.ps1` |

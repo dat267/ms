@@ -1,32 +1,54 @@
 #!/usr/bin/env pwsh
 
 # ── Your script block ───────────────────────────────────────
+# Example: a user-manager CLI that exercises (almost) every supported
+# attribute type. Copy this file and replace $MainPayload with your own logic.
 $MainPayload = {
   <#
   .SYNOPSIS
-  Creates a new user account in the system.
+  Provision a user account, demonstrating all cli.ps1 attribute features.
   .PARAMETER Name
-  The unique username for the account (3-20 characters).
+  Unique username (3-20 characters).
   .PARAMETER Role
-  Authorization level for the user.
+  Authorization level for the account.
   .PARAMETER Email
-  Contact email address.
+  Contact email address (must look like an address).
+  .PARAMETER Tags
+  Labels for the account. Repeat the flag (-t dev -t prod) or comma-separate (-t dev,prod).
+  .PARAMETER HomeDir
+  Home directory. Positional: pass it without a flag.
+  .PARAMETER Offset
+  Signed offset, must be in range [-10, 10] (demonstrates negative numbers).
+  .PARAMETER Token
+  Access token; must end with the literal 'ok'.
   .PARAMETER Password
-  Account password (masked securely).
+  Account password (masked entry).
+  .PARAMETER Credential
+  Full credentials as a PSCredential (username + password).
   .PARAMETER Notify
-  Send notification email upon creation.
+  Send a notification when the account is created.
   #>
   param(
     [Parameter(Mandatory)][ValidateLength(3,20)][string]$Name,
     [ValidateSet('admin','user','viewer')][string]$Role = 'user',
     [ValidatePattern('^\S+@\S+$')][string]$Email,
+    [Alias('t')][ValidateCount(1,5)][string[]]$Tags,
+    [Parameter(Position=0)][string]$HomeDir,
+    [ValidateRange(-10,10)][int]$Offset = 0,
+    [ValidateScript({ $_ -like '*ok' })][string]$Token,
     [securestring]$Password,
+    [PSCredential]$Credential,
     [switch]$Notify
   )
   Write-Host "  Created user '$Name'" -ForegroundColor Green
   Write-Host "  Role: $Role" -ForegroundColor Cyan
   if ($Email) { Write-Host "  Email: $Email" -ForegroundColor Cyan }
+  if ($Tags) { Write-Host "  Tags: $($Tags -join ', ')" -ForegroundColor Cyan }
+  if ($HomeDir) { Write-Host "  HomeDir: $HomeDir" -ForegroundColor Cyan }
+  Write-Host "  Offset: $Offset" -ForegroundColor Cyan
+  if ($Token) { Write-Host "  Token: $Token" -ForegroundColor Cyan }
   if ($Password) { Write-Host "  Password set (length: $($Password.Length))" -ForegroundColor Cyan }
+  if ($Credential) { Write-Host "  Credential: $($Credential.UserName)" -ForegroundColor Cyan }
   if ($Notify) { Write-Host "  Notification sent" -ForegroundColor Yellow }
 }
 
